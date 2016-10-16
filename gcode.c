@@ -5,6 +5,7 @@
   Copyright (c) 2011-2015 Sungeun K. Jeon
   Copyright (c) 2009-2011 Simen Svale Skogsrud
 
+
   Grbl is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
   the Free Software Foundation, either version 3 of the License, or
@@ -40,7 +41,7 @@ parser_block_t gc_block;
 
 void gc_init() 
 {
-  memset(&gc_state, 0, sizeof(parser_state_t));
+  memset(&gc_state, 0, sizeof(gc_state));
   
   // Load default G54 coordinate system.
   if (!(settings_read_coord_data(gc_state.modal.coord_select,gc_state.coord_system))) { 
@@ -79,8 +80,8 @@ uint8_t gc_execute_line(char *line)
      executed after successful error-checking. The parser block struct also contains a block
      values struct, word tracking variables, and a non-modal commands tracker for the new 
      block. This struct contains all of the necessary information to execute the block. */
-
-  memset(&gc_block, 0, sizeof(parser_block_t)); // Initialize the parser block struct.
+     
+  memset(&gc_block, 0, sizeof(gc_block)); // Initialize the parser block struct.
   memcpy(&gc_block.modal,&gc_state.modal,sizeof(gc_modal_t)); // Copy current modes
   uint8_t axis_command = AXIS_COMMAND_NONE;
   uint8_t axis_0, axis_1, axis_linear;
@@ -187,10 +188,23 @@ uint8_t gc_execute_line(char *line)
           case 80: 
             word_bit = MODAL_GROUP_G1; 
             switch(int_value) {
-              case 0: gc_block.modal.motion = MOTION_MODE_SEEK; break; // G0
+             case 0: gc_block.modal.motion = MOTION_MODE_SEEK; break; // G0
               case 1: gc_block.modal.motion = MOTION_MODE_LINEAR; break; // G1
               case 2: gc_block.modal.motion = MOTION_MODE_CW_ARC; break; // G2
               case 3: gc_block.modal.motion = MOTION_MODE_CCW_ARC; break; // G3
+             /*
+			case 0: gc_block.modal.motion = MOTION_MODE_SEEK;		word_bit |= bit(MODAL_GROUP_M8); break; // G0
+              case 1: gc_block.modal.motion = MOTION_MODE_LINEAR;	word_bit |= bit(MODAL_GROUP_M8); break; // G1
+              case 2: gc_block.modal.motion = MOTION_MODE_CW_ARC;	word_bit |= bit(MODAL_GROUP_M8); break; // G2
+              case 3: gc_block.modal.motion = MOTION_MODE_CCW_ARC;	word_bit |= bit(MODAL_GROUP_M8); break; // G3
+			 
+			 //https://github.com/grbl/grbl/issues/718
+			  case 0: gc_block.modal.motion = MOTION_MODE_SEEK; gc_block.modal.spindle = SPINDLE_DISABLE;      word_bit |= bit(MODAL_GROUP_M8); break; // G0
+              case 1: gc_block.modal.motion = MOTION_MODE_LINEAR; gc_block.modal.spindle = SPINDLE_ENABLE_CW;  word_bit |= bit(MODAL_GROUP_M8); break; // G1
+              case 2: gc_block.modal.motion = MOTION_MODE_CW_ARC;  gc_block.modal.spindle = SPINDLE_ENABLE_CW; word_bit |= bit(MODAL_GROUP_M8);  break; // G2
+              case 3: gc_block.modal.motion = MOTION_MODE_CCW_ARC; gc_block.modal.spindle = SPINDLE_ENABLE_CW; word_bit |= bit(MODAL_GROUP_M8);  break; // G3
+			   */
+			  
               case 38: 
                 switch(mantissa) {
                   case 20: gc_block.modal.motion = MOTION_MODE_PROBE_TOWARD; break; // G38.2
@@ -278,12 +292,12 @@ uint8_t gc_execute_line(char *line)
         // Determine 'M' command and its modal group
         if (mantissa > 0) { FAIL(STATUS_GCODE_COMMAND_VALUE_NOT_INTEGER); } // [No Mxx.x commands]
         switch(int_value) {
-          case 0: case 1: case 2: case 30: 
+          case 0: case 1:case 30: case 2: 
             word_bit = MODAL_GROUP_M4; 
             switch(int_value) {
               case 0: gc_block.modal.program_flow = PROGRAM_FLOW_PAUSED; break; // Program pause
               case 1: break; // Optional stop not supported. Ignore.
-              case 2: case 30: gc_block.modal.program_flow = PROGRAM_FLOW_COMPLETED; break; // Program end and reset 
+              case 2: case 30: gc_block.modal.program_flow = PROGRAM_FLOW_COMPLETED; break; // Program end and reset ~[ak]~
             }
             break;
           #ifndef USE_SPINDLE_DIR_AS_ENABLE_PIN
@@ -1037,7 +1051,7 @@ uint8_t gc_execute_line(char *line)
 	protocol_buffer_synchronize(); // Sync and finish all remaining buffered motions before moving on.
 	if (gc_state.modal.program_flow == PROGRAM_FLOW_PAUSED) {
 	  if (sys.state != STATE_CHECK_MODE) {
-		bit_true_atomic(sys_rt_exec_state, EXEC_FEED_HOLD); // Use feed hold for program pause.
+		bit_true_atomic(sys.rt_exec_state, EXEC_FEED_HOLD); // Use feed hold for program pause.
 		protocol_execute_realtime(); // Execute suspend.
 	  }
 	} else { // == PROGRAM_FLOW_COMPLETED

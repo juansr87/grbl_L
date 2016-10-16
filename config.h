@@ -17,6 +17,8 @@
 
   You should have received a copy of the GNU General Public License
   along with Grbl.  If not, see <http://www.gnu.org/licenses/>.
+  
+  16.10.2016 see examples\grblUpload
 */
   
 // This file contains compile-time configurations for Grbl's internal system. For the most part,
@@ -31,7 +33,7 @@
 
 
 // Default settings. Used when resetting EEPROM. Change to desired name in defaults.h
-#define DEFAULTS_MYCHINALASER
+#define DEFAULTS_GENERIC
 
 // Serial baud rate
 #define BAUD_RATE 115200
@@ -74,14 +76,17 @@
 // NOTE: Defaults are set for a traditional 3-axis CNC machine. Z-axis first to clear, followed by X & Y.
 //#define HOMING_CYCLE_0 (1<<Z_AXIS)                // REQUIRED: First move Z to clear workspace.
 //#define HOMING_CYCLE_1 ((1<<X_AXIS)|(1<<Y_AXIS))  // OPTIONAL: Then move X,Y at the same time.
-#define HOMING_CYCLE_0 ((1<<Y_AXIS))  // [ak] no z-achse
-#define HOMING_CYCLE_1 ((1<<X_AXIS))  // [ak]
 // #define HOMING_CYCLE_2                         // OPTIONAL: Uncomment and add axes mask to enable
+
+#define HOMING_CYCLE_0 ((1<<Y_AXIS))  // y [ak]
+#define HOMING_CYCLE_1 ((1<<X_AXIS))  // x [ak]
+
+
 
 // Number of homing cycles performed after when the machine initially jogs to limit switches.
 // This help in preventing overshoot and should improve repeatability. This value should be one or 
 // greater.
-#define N_HOMING_LOCATE_CYCLE 1 // Integer (1-128)
+#define N_HOMING_LOCATE_CYCLE 2 // Integer (1-128)
 
 // After homing, Grbl will set by default the entire machine space into negative space, as is typical
 // for professional CNC machines, regardless of where the limit switches are located. Uncomment this 
@@ -128,8 +133,8 @@
 #define MESSAGE_PROBE_COORDINATES // Enabled by default. Comment to disable.
  
 // Enables a second coolant control pin via the mist coolant g-code command M7 on the Arduino Uno
-// analog pin 4. Only use this option if you require a second coolant control pin.
-// NOTE: The M8 flood coolant control pin on analog pin 3 will still be functional regardless.
+// analog pin 5. Only use this option if you require a second coolant control pin.
+// NOTE: The M8 flood coolant control pin on analog pin 4 will still be functional regardless.
 // #define ENABLE_M7 // Disabled by default. Uncomment to enable.
 
 // This option causes the feed hold input to act as a safety door switch. A safety door, when triggered,
@@ -149,23 +154,14 @@
 // #define HOMING_CYCLE_0 (1<<X_AXIS) and #define HOMING_CYCLE_1 (1<<Y_AXIS)
 // NOTE: This configuration option alters the motion of the X and Y axes to principle of operation
 // defined at (http://corexy.com/theory.html). Motors are assumed to positioned and wired exactly as
-// described, if not, motions may move in strange directions. Grbl requires the CoreXY A and B motors
+// described, if not, motions may move in strange directions. Grbl assumes the CoreXY A and B motors
 // have the same steps per mm internally.
 // #define COREXY // Default disabled. Uncomment to enable.
 
 // Inverts pin logic of the control command pins. This essentially means when this option is enabled
 // you can use normally-closed switches, rather than the default normally-open switches.
-// NOTE: If you require individual control pins inverted, keep this macro disabled and simply alter
-//   the CONTROL_INVERT_MASK definition in cpu_map.h files.
-// #define INVERT_ALL_CONTROL_PINS // Default disabled. Uncomment to enable.
-
-// Inverts select limit pin states based on the following mask. This effects all limit pin functions, 
-// such as hard limits and homing. However, this is different from overall invert limits setting. 
-// This build option will invert only the limit pins defined here, and then the invert limits setting
-// will be applied to all of them. This is useful when a user has a mixed set of limit pins with both
-// normally-open(NO) and normally-closed(NC) switches installed on their machine.
-// NOTE: PLEASE DO NOT USE THIS, unless you have a situation that needs it.
-// #define INVERT_LIMIT_PIN_MASK ((1<<X_LIMIT_BIT)|(1<<Y_LIMIT_BIT)) // Default disabled. Uncomment to enable.
+// NOTE: Will eventually be added to Grbl settings in v1.0.
+// #define INVERT_CONTROL_PIN // Default disabled. Uncomment to enable.
 
 // Inverts the spindle enable pin from low-disabled/high-enabled to low-enabled/high-disabled. Useful
 // for some pre-built electronic boards.
@@ -204,6 +200,14 @@
 // NOTE: Changing this value also changes the execution time of a segment in the step segment buffer. 
 // When increasing this value, this stores less overall time in the segment buffer and vice versa. Make
 // certain the step segment buffer is increased/decreased to account for these changes.
+
+// Die zeitliche Auflösung des Beschleunigungs-Management-Subsystems. Eine höhere Zahl gibt glatter
+// Beschleunigung, besonders bemerkbar auf Maschinen, die mit sehr hohen Vorschüben laufen, können aber negativ sein
+// Auswirkungen der Leistung. Der korrekte Wert für diesen Parameter ist maschinenabhängig, daher wird empfohlen
+// setze dies nur so hoch wie nötig. Annähernde erfolgreiche Werte können von 50 bis 200 oder mehr reichen.
+// HINWEIS: Durch das Ändern dieses Wertes wird auch die Ausführungszeit eines Segments im Schrittsegmentpuffer geändert.
+// Bei Erhöhung dieses Wertes wird weniger Gesamtzeit im Segmentpuffer gespeichert und umgekehrt. Machen
+// bestimmt, dass der Schritt-Segment-Puffer erhöht oder verringert wird, um diese Änderungen zu berücksichtigen.
 #define ACCELERATION_TICKS_PER_SECOND 100 
 
 // Adaptive Multi-Axis Step Smoothing (AMASS) is an advanced feature that does what its name implies, 
@@ -211,6 +215,12 @@
 // frequencies below 10kHz, where the aliasing between axes of multi-axis motions can cause audible 
 // noise and shake your machine. At even lower step frequencies, AMASS adapts and provides even better
 // step smoothing. See stepper.c for more details on the AMASS system works.
+
+// Adaptive Multi-Axis-Step-Glättung (AMASS) ist ein fortschrittliches Feature, das macht, was sein Name impliziert,
+// Glättung des Tretens von Mehrachsenbewegungen. Diese Funktion glättet die Bewegung besonders bei niedrigem Schritt
+// Frequenzen unter 10 kHz, wobei das Aliasing zwischen Achsen von Mehrachsenbewegungen hörbar wird
+// Geräusch und schütteln Sie Ihre Maschine. Bei noch niedrigeren Stufenfrequenzen passt sich AMASS noch besser an
+// Schrittglättung. Siehe stepper.c für weitere Details über das AMASS-System funktioniert.
 #define ADAPTIVE_MULTI_AXIS_STEP_SMOOTHING  // Default enabled. Comment to disable.
 
 // Sets the maximum step rate allowed to be written as a Grbl setting. This option enables an error 
@@ -218,6 +228,12 @@
 // step rate is strictly limited by the CPU speed and will change if something other than an AVR running
 // at 16MHz is used.
 // NOTE: For now disabled, will enable if flash space permits.
+
+// Setzt die maximale Schrittrate, die als Grbl-Einstellung geschrieben werden darf. Diese Option ermöglicht einen Fehler
+// überprüfen Sie das Einstellungsmodul, um Einstellwerte zu verhindern, die diese Begrenzung überschreiten. Das Maximum
+// Schrittrate ist streng durch die CPU-Geschwindigkeit begrenzt und ändert sich, wenn etwas anderes als ein AVR läuft
+// bei 16MHz verwendet.
+// HINWEIS: Für jetzt deaktiviert, aktiviert, wenn Flash-Speicherplatz erlaubt.
 // #define MAX_STEP_RATE_HZ 30000 // Hz
 
 // By default, Grbl sets all input pins to normal-high operation with their internal pull-up resistors
@@ -240,12 +256,19 @@
 // Sets which axis the tool length offset is applied. Assumes the spindle is always parallel with 
 // the selected axis with the tool oriented toward the negative direction. In other words, a positive
 // tool length offset value is subtracted from the current location.
+// Legt fest, auf welche Achse der Werkzeuglängenversatz angewendet wird. Die Spindel ist immer parallel
+// die ausgewählte Achse mit dem in Richtung der negativen Richtung orientierten Werkzeug. Mit anderen Worten, eine positive
+// Werkzeuglängen-Offsetwert wird von der aktuellen Position subtrahiert.
 #define TOOL_LENGTH_OFFSET_AXIS Z_AXIS // Default z-axis. Valid values are X_AXIS, Y_AXIS, or Z_AXIS.
 
 // Enables variable spindle output voltage for different RPM values. On the Arduino Uno, the spindle
 // enable pin will output 5V for maximum RPM with 256 intermediate levels and 0V when disabled.
 // NOTE: IMPORTANT for Arduino Unos! When enabled, the Z-limit pin D11 and spindle enable pin D12 switch!
 // The hardware PWM output on pin D11 is required for variable spindle output voltages.
+// Aktiviert variable Spindelausgangsspannung für verschiedene Drehzahlwerte. Auf dem Arduino Uno, der Spindel
+// Enable Pin gibt 5V für maximale RPM mit 256 Zwischenpegeln und 0V bei deaktiviertem Ausgang aus.
+// HINWEIS: WICHTIG für Arduino Unos! Wenn sie aktiviert ist, schalten der Z-Begrenzungsstift D11 und der Spindelstift D12 ein!
+// Der Hardware-PWM-Ausgang auf Pin D11 wird für variable Spindelausgangsspannungen benötigt.
 #define VARIABLE_SPINDLE // Default enabled. Comment to disable.
 
 // Used by the variable spindle output only. These parameters set the maximum and minimum spindle speed
@@ -267,10 +290,14 @@
 // the spindle direction pin(D13) as a separate spindle enable pin along with spindle speed PWM on pin D11. 
 // NOTE: This configure option only works with VARIABLE_SPINDLE enabled and a 328p processor (Uno). 
 // NOTE: With no direction pin, the spindle clockwise M4 g-code command will be removed. M3 and M5 still work.
-// NOTE: BEWARE! The Arduino bootloader toggles the D13 pin when it powers up. If you flash Grbl with
-// a programmer (you can use a spare Arduino as "Arduino as ISP". Search the web on how to wire this.), 
-// this D13 LED toggling should go away. We haven't tested this though. Please report how it goes!
+
 // #define USE_SPINDLE_DIR_AS_ENABLE_PIN // Default disabled. Uncomment to enable.
+//[ak]aktivieren
+
+
+
+
+
 
 // With this enabled, Grbl sends back an echo of the line it has received, which has been pre-parsed (spaces
 // removed, capitalized letters, no comments) and is to be immediately executed by Grbl. Echoes will not be 
@@ -391,6 +418,14 @@
 // that the switches don't bounce, we recommend enabling this option. This will help prevent
 // triggering a hard limit when the machine disengages from the switch.
 // NOTE: This option has no effect if SOFTWARE_DEBOUNCE is enabled.
+// Erzwinge Grbl, um den Zustand der Hard-Endschalter zu überprüfen, wenn der Prozessor einen Pin erkennt
+// innerhalb der Hard-Limit-ISR-Routine ändern. Standardmäßig löst Grbl die harten Grenzen aus
+// Alarm bei jedem PIN-Wechsel, da Bouncing-Schalter eine Zustandsüberprüfung wie diese verursachen können
+// Den Stift falsch verlegen. Wenn harte Grenzwerte ausgelöst werden, sollten sie zu 100% zuverlässig sein
+// Grund, dass diese Option standardmäßig deaktiviert ist. Nur wenn Ihr System / Ihre Elektronik garantieren kann
+// dass die Schalter nicht springen, empfehlen wir diese Option zu aktivieren. Dies wird verhindern, zu verhindern
+// Auslösung einer harten Grenze, wenn die Maschine vom Schalter ausschaltet.
+// HINWEIS: Diese Option hat keine Wirkung, wenn SOFTWARE_DEBOUNCE aktiviert ist.
 // #define HARD_LIMIT_FORCE_STATE_CHECK // Default disabled. Uncomment to enable.
 
 

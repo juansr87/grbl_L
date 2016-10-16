@@ -41,21 +41,21 @@ void system_init()
 ISR(CONTROL_INT_vect) 
 {
   uint8_t pin = (CONTROL_PIN & CONTROL_MASK);
-  #ifndef INVERT_ALL_CONTROL_PINS
-    pin ^= CONTROL_INVERT_MASK;
+  #ifndef INVERT_CONTROL_PIN
+    pin ^= CONTROL_MASK;
   #endif
   // Enter only if any CONTROL pin is detected as active.
   if (pin) { 
     if (bit_istrue(pin,bit(RESET_BIT))) {
       mc_reset();
     } else if (bit_istrue(pin,bit(CYCLE_START_BIT))) {
-      bit_true(sys_rt_exec_state, EXEC_CYCLE_START);
+      bit_true(sys.rt_exec_state, EXEC_CYCLE_START);
     #ifndef ENABLE_SAFETY_DOOR_INPUT_PIN
       } else if (bit_istrue(pin,bit(FEED_HOLD_BIT))) {
-        bit_true(sys_rt_exec_state, EXEC_FEED_HOLD); 
+        bit_true(sys.rt_exec_state, EXEC_FEED_HOLD); 
     #else
       } else if (bit_istrue(pin,bit(SAFETY_DOOR_BIT))) {
-        bit_true(sys_rt_exec_state, EXEC_SAFETY_DOOR);
+        bit_true(sys.rt_exec_state, EXEC_SAFETY_DOOR);
     #endif
     } 
   }
@@ -139,7 +139,7 @@ uint8_t system_execute_line(char *line)
             sys.state = STATE_IDLE;
             // Don't run startup script. Prevents stored moves in startup from causing accidents.
             if (system_check_safety_door_ajar()) { // Check safety door switch before returning.
-              bit_true(sys_rt_exec_state, EXEC_SAFETY_DOOR);
+              bit_true(sys.rt_exec_state, EXEC_SAFETY_DOOR);
               protocol_execute_realtime(); // Enter safety door mode.
             }
           } // Otherwise, no effect.
@@ -175,7 +175,7 @@ uint8_t system_execute_line(char *line)
             
             // TODO: Likely not required.
             if (system_check_safety_door_ajar()) { // Check safety door switch before homing.
-              bit_true(sys_rt_exec_state, EXEC_SAFETY_DOOR);
+              bit_true(sys.rt_exec_state, EXEC_SAFETY_DOOR);
               protocol_execute_realtime(); // Enter safety door mode.
             }
             
@@ -200,21 +200,7 @@ uint8_t system_execute_line(char *line)
             } while (line[char_counter++] != 0);
             settings_store_build_info(line);
           }
-          break; 
-        case 'R' : // Restore defaults [IDLE/ALARM]
-          if (line[++char_counter] != 'S') { return(STATUS_INVALID_STATEMENT); }
-          if (line[++char_counter] != 'T') { return(STATUS_INVALID_STATEMENT); }
-          if (line[++char_counter] != '=') { return(STATUS_INVALID_STATEMENT); }
-          if (line[char_counter+2] != 0) { return(STATUS_INVALID_STATEMENT); }                        
-          switch (line[++char_counter]) {
-            case '$': settings_restore(SETTINGS_RESTORE_DEFAULTS); break;
-            case '#': settings_restore(SETTINGS_RESTORE_PARAMETERS); break;
-            case '*': settings_restore(SETTINGS_RESTORE_ALL); break;
-            default: return(STATUS_INVALID_STATEMENT);
-          }
-          report_feedback_message(MESSAGE_RESTORE_DEFAULTS);
-          mc_reset(); // Force reset to ensure settings are initialized correctly.
-          break;
+          break;                 
         case 'N' : // Startup lines. [IDLE/ALARM]
           if ( line[++char_counter] == 0 ) { // Print startup lines
             for (helper_var=0; helper_var < N_STARTUP_LINE; helper_var++) {
@@ -264,10 +250,10 @@ float system_convert_axis_steps_to_mpos(int32_t *steps, uint8_t idx)
 {
   float pos;
   #ifdef COREXY
-    if (idx==X_AXIS) { 
-      pos = (float)system_convert_corexy_to_x_axis_steps(steps) / settings.steps_per_mm[A_MOTOR];
-    } else if (idx==Y_AXIS) {
-      pos = (float)system_convert_corexy_to_y_axis_steps(steps) / settings.steps_per_mm[B_MOTOR];
+    if (idx==A_MOTOR) { 
+      pos = 0.5*((steps[A_MOTOR] + steps[B_MOTOR])/settings.steps_per_mm[idx]);
+    } else if (idx==B_MOTOR) {
+      pos = 0.5*((steps[A_MOTOR] - steps[B_MOTOR])/settings.steps_per_mm[idx]);
     } else {
       pos = steps[idx]/settings.steps_per_mm[idx];
     }
@@ -276,7 +262,7 @@ float system_convert_axis_steps_to_mpos(int32_t *steps, uint8_t idx)
   #endif
   return(pos);
 }
-
+  
 
 void system_convert_array_steps_to_mpos(float *position, int32_t *steps)
 {
@@ -286,17 +272,3 @@ void system_convert_array_steps_to_mpos(float *position, int32_t *steps)
   }
   return;
 }
-
-
-// CoreXY calculation only. Returns x or y-axis "steps" based on CoreXY motor steps.
-#ifdef COREXY
-  int32_t system_convert_corexy_to_x_axis_steps(int32_t *steps)
-  {
-    return( (steps[A_MOTOR] + steps[B_MOTOR])/2 );
-  }
-  int32_t system_convert_corexy_to_y_axis_steps(int32_t *steps)
-  {
-    return( (steps[A_MOTOR] - steps[B_MOTOR])/2 );
-  }
-#endif
-

@@ -1,4 +1,4 @@
 # grbl_L
-gbrl 0.9j to Laser (test)
+gbrl 0.9i to Laser (test)
 
-my backup of gbrl 0.9j
+my backup of gbrl 0.9i
