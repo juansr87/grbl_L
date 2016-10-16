@@ -138,6 +138,8 @@ void report_feedback_message(uint8_t message_code)
     printPgmString(PSTR("Check Door")); break;
     case MESSAGE_PROGRAM_END:
     printPgmString(PSTR("Pgm End")); break;
+    case MESSAGE_RESTORE_DEFAULTS:
+    printPgmString(PSTR("Restoring defaults")); break;
   }
   printPgmString(PSTR("]\r\n"));
 }
@@ -329,7 +331,7 @@ void report_gcode_modes()
     case MOTION_MODE_NONE : printPgmString(PSTR("G80")); break;
     default: 
       printPgmString(PSTR("G38."));
-      print_uint8_base10(gc_state.modal.motion - (MOTION_MODE_PROBE_TOWARD+2));
+      print_uint8_base10(gc_state.modal.motion - (MOTION_MODE_PROBE_TOWARD-2));
   }
 
   printPgmString(PSTR(" G"));
